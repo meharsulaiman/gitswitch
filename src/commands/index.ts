@@ -3,12 +3,14 @@ import { registerAddIdentityCommand } from './addIdentity';
 import { registerSwitchIdentityCommand } from './switchIdentity';
 import { registerBindRepoCommand } from './bindRepo';
 import { registerManageIdentitiesCommand } from './manageIdentities';
+import { registerShowReposCommand, registerSelectRepoIdentityCommand } from './showRepos';
 import { WebviewManager } from '../ui/webviewManager';
 import { IdentityPicker } from '../ui/identityPicker';
 import { IdentityStore } from '../core/identityStore';
 import { RepoStore } from '../core/repoStore';
 import { GitService } from '../core/gitService';
 import { SshService } from '../core/sshService';
+import { RepoPanel } from '../ui/repoPanel';
 
 export function registerAllCommands(
   context: vscode.ExtensionContext,
@@ -17,12 +19,15 @@ export function registerAllCommands(
   identityStore: IdentityStore,
   repoStore: RepoStore,
   gitService: GitService,
-  sshService: SshService
+  sshService: SshService,
+  repoPanel: RepoPanel
 ): vscode.Disposable[] {
   return [
     registerAddIdentityCommand(context, webviewManager),
     registerSwitchIdentityCommand(context, identityPicker, identityStore, repoStore, gitService, sshService),
     registerBindRepoCommand(context, identityPicker, identityStore, repoStore, gitService, sshService),
     registerManageIdentitiesCommand(context, webviewManager),
+    registerShowReposCommand(context, repoPanel),
+    registerSelectRepoIdentityCommand(context, repoPanel),
   ];
 }

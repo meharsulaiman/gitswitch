@@ -7,6 +7,8 @@ export const COMMANDS = {
   SWITCH_IDENTITY: "gitswitch.switchIdentity",
   BIND_REPO: "gitswitch.bindRepo",
   MANAGE_IDENTITIES: "gitswitch.manageIdentities",
+  SHOW_REPOS: "gitswitch.showRepos",
+  SELECT_REPO_IDENTITY: "gitswitch.selectRepoIdentity",
 } as const;
 
 export const CONFIG_KEYS = {

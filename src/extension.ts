@@ -3,11 +3,13 @@ import { IdentityStore } from "./core/identityStore";
 import { RepoStore } from "./core/repoStore";
 import { GitService } from "./core/gitService";
 import { SshService } from "./core/sshService";
+import { MultiRepoManager } from "./core/multiRepoManager";
 import { WorkspaceWatcher } from "./watchers/workspaceWatcher";
 import { RepoWatcher } from "./watchers/repoWatcher";
 import { StatusBar } from "./ui/statusBar";
 import { IdentityPicker } from "./ui/identityPicker";
 import { WebviewManager } from "./ui/webviewManager";
+import { RepoPanel } from "./ui/repoPanel";
 import { MismatchDetector } from "./core/mismatchDetector";
 import { registerAllCommands } from "./commands";
 
@@ -38,10 +40,14 @@ export async function activate(context: vscode.ExtensionContext) {
 
   const sshService = new SshService();
 
+  // Initialize multi-repo manager
+  const multiRepoManager = new MultiRepoManager(gitService, repoStore, identityStore);
+
   // Initialize UI components
-  statusBar = new StatusBar(identityStore, repoStore, gitService);
   const identityPicker = new IdentityPicker(identityStore);
   const webviewManager = new WebviewManager(context, identityStore);
+  const repoPanel = new RepoPanel(context, multiRepoManager, identityStore, gitService, sshService, repoStore);
+  statusBar = new StatusBar(identityStore, repoStore, gitService, multiRepoManager);
 
   // Initialize mismatch detector
   const mismatchDetector = new MismatchDetector(
@@ -129,19 +135,35 @@ export async function activate(context: vscode.ExtensionContext) {
     identityStore,
     repoStore,
     gitService,
-    sshService
+    sshService,
+    repoPanel
   );
   commandDisposables.forEach((d) => context.subscriptions.push(d));
 
-  // Scan current workspace folders
+  // Scan current workspace folders for all repos
   const folders = vscode.workspace.workspaceFolders || [];
   for (const folder of folders) {
     try {
-      const repoPath = await gitService.findGitRoot(folder.uri.fsPath);
-      if (repoPath) {
-        currentRepoPath = repoPath;
+      // Scan for all repos (including nested ones)
+      const allRepos = await gitService.findAllGitRepos(folder.uri.fsPath);
+      
+      // Also check if root is a repo
+      const rootRepo = await gitService.findGitRoot(folder.uri.fsPath);
+      if (rootRepo === folder.uri.fsPath && !allRepos.includes(rootRepo)) {
+        allRepos.unshift(rootRepo);
+      }
+
+      for (const repoPath of allRepos) {
         await repoWatcher.watchRepo(repoPath, folder);
-        await statusBar.update(repoPath);
+      }
+
+      // Update status bar based on active editor
+      const activeEditor = vscode.window.activeTextEditor;
+      if (activeEditor && activeEditor.document.uri.scheme === 'file') {
+        await statusBar?.update();
+      } else if (allRepos.length > 0) {
+        // Fallback to first repo if no active editor
+        await statusBar?.update(allRepos[0]);
       }
     } catch (error: any) {
       // Handle errors gracefully for individual folders
@@ -152,9 +174,8 @@ export async function activate(context: vscode.ExtensionContext) {
   // Watch for active editor changes to update status bar
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor(async () => {
-      if (currentRepoPath) {
-        await statusBar?.update(currentRepoPath);
-      }
+      // StatusBar.update() will auto-detect repo from active file
+      await statusBar?.update();
     })
   );
 

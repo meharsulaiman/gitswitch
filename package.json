@@ -57,8 +57,47 @@
         "command": "gitswitch.manageIdentities",
         "title": "Manage Identities",
         "icon": "$(settings-gear)"
+      },
+      {
+        "command": "gitswitch.showRepos",
+        "title": "Show Repositories",
+        "icon": "$(repo)"
+      },
+      {
+        "command": "gitswitch.selectRepoIdentity",
+        "title": "Select Identity for Repository"
       }
     ],
+    "views": {
+      "explorer": [
+        {
+          "id": "gitswitch.repos",
+          "name": "Git Repositories",
+          "when": "workspaceFolderCount > 0"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "gitswitch.showRepos",
+          "when": "view == gitswitch.repos",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "gitswitch.selectRepoIdentity",
+          "when": "view == gitswitch.repos && viewItem == repo-unbound",
+          "group": "inline"
+        },
+        {
+          "command": "gitswitch.selectRepoIdentity",
+          "when": "view == gitswitch.repos && viewItem == repo-bound",
+          "group": "inline"
+        }
+      ]
+    },
     "configuration": {
       "title": "GitSwitch",
       "properties": {

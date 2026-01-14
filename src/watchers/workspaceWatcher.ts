@@ -37,9 +37,19 @@ export class WorkspaceWatcher {
 
   private async scanFolder(workspaceFolder: vscode.WorkspaceFolder): Promise<void> {
     try {
-      const gitRoot = await this.gitService.findGitRoot(workspaceFolder.uri.fsPath);
-      if (gitRoot) {
-        this.onRepoDetected(gitRoot, workspaceFolder);
+      // First check if workspace root itself is a Git repo
+      const rootRepo = await this.gitService.findGitRoot(workspaceFolder.uri.fsPath);
+      if (rootRepo === workspaceFolder.uri.fsPath) {
+        this.onRepoDetected(rootRepo, workspaceFolder);
+      }
+
+      // Then scan for nested repos
+      const allRepos = await this.gitService.findAllGitRepos(workspaceFolder.uri.fsPath);
+      for (const repoPath of allRepos) {
+        // Skip if we already detected the root repo
+        if (repoPath !== workspaceFolder.uri.fsPath || rootRepo !== workspaceFolder.uri.fsPath) {
+          this.onRepoDetected(repoPath, workspaceFolder);
+        }
       }
     } catch (error) {
       console.error(`Failed to scan folder ${workspaceFolder.uri.fsPath}:`, error);

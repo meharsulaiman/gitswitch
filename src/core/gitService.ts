@@ -57,6 +57,65 @@ export class GitService {
     return undefined;
   }
 
+  async findAllGitRepos(folderPath: string, maxDepth: number = 5): Promise<string[]> {
+    const repos: string[] = [];
+    const visited = new Set<string>();
+
+    const scanDirectory = async (dirPath: string, depth: number): Promise<void> => {
+      if (depth > maxDepth) {
+        return;
+      }
+
+      const normalizedPath = path.normalize(dirPath);
+      if (visited.has(normalizedPath)) {
+        return;
+      }
+      visited.add(normalizedPath);
+
+      try {
+        // Check if current directory is a Git repo
+        const gitPath = path.join(dirPath, '.git');
+        try {
+          const stats = await fs.promises.stat(gitPath);
+          if (stats.isDirectory() || stats.isFile()) {
+            repos.push(dirPath);
+            return; // Don't scan inside a Git repo
+          }
+        } catch {
+          // Not a Git repo, continue scanning
+        }
+
+        // Read directory contents
+        const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+
+        for (const entry of entries) {
+          // Skip hidden files/directories and common ignore patterns
+          if (entry.name.startsWith('.') && entry.name !== '.git') {
+            continue;
+          }
+
+          // Skip common directories that shouldn't be scanned
+          if (['node_modules', '.git', 'dist', 'build', 'out', '.vscode'].includes(entry.name)) {
+            continue;
+          }
+
+          if (entry.isDirectory()) {
+            const subPath = path.join(dirPath, entry.name);
+            await scanDirectory(subPath, depth + 1);
+          }
+        }
+      } catch (error: any) {
+        // Handle permission errors gracefully
+        if (error.code !== 'EACCES' && error.code !== 'EPERM') {
+          console.debug(`Failed to scan directory ${dirPath}:`, error.message);
+        }
+      }
+    };
+
+    await scanDirectory(folderPath, 0);
+    return repos;
+  }
+
   async getGitConfig(repoPath: string): Promise<GitConfig | undefined> {
     try {
       const { execSync } = require('child_process');
