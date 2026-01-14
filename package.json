@@ -1,6 +1,6 @@
 {
   "name": "gitswitch",
-  "displayName": "GitSwitch",
+  "displayName": "GitSwitch - Multi Account Manager",
   "description": "Never accidentally commit from the wrong GitHub account again. Seamlessly switch between multiple Git identities per repository.",
   "publisher": "sulaimanshabbir31",
   "version": "0.1.0",
